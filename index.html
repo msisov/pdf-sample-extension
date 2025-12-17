@@ -19,7 +19,20 @@
 </head>
 <body>
   <h1>Sample PDF Extension</h1>
-  <p id="pdf-url"></p>
+  <p><strong>Window URL:</strong> <span id="pdf-url"></span></p>
+
+  <h2>Stream Info (from chrome.mimeHandler API)</h2>
+  <table border="1" cellpadding="5">
+    <tr><td><strong>MIME Type</strong></td><td id="mime-type"></td></tr>
+    <tr><td><strong>Original URL</strong></td><td id="original-url"></td></tr>
+    <tr><td><strong>Stream URL</strong></td><td id="stream-url"></td></tr>
+    <tr><td><strong>Tab ID</strong></td><td id="tab-id"></td></tr>
+    <tr><td><strong>Embedded</strong></td><td id="embedded"></td></tr>
+  </table>
+
+  <h3>Response Headers</h3>
+  <pre id="response-headers"></pre>
+
   <iframe id="settings-frame" src="https://msisov.github.io/settings.html" scrolling="no" allowfullscreen width="100%" height="100%"></iframe>
   <script src="main.js"></script>
 </body>
