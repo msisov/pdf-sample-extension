@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html style="width:100%;height:100%;margin:0;padding:0;">
+<head>
+  <meta charset="utf-8">
+  <title>Theme Settings</title>
+</head>
+<body style="width:100%;height:100%;margin:0;padding:10px;">
+  <h2>Theme Mode Preference</h2>
+  <table>
+    <tr>
+      <td><input type="radio" name="theme" id="theme-light" value="light"></td>
+      <td><label for="theme-light">Light Mode</label></td>
+    </tr>
+    <tr>
+      <td><input type="radio" name="theme" id="theme-dark" value="dark"></td>
+      <td><label for="theme-dark">Dark Mode</label></td>
+    </tr>
+    <tr>
+      <td><input type="radio" name="theme" id="theme-auto" value="auto" checked></td>
+      <td><label for="theme-auto">Auto / Default</label></td>
+    </tr>
+  </table>
+  <button id="save-btn">Save Preference</button>
+  <p id="saved-value">No preference saved</p>
+  <script src="settings.js"></script>
+</body>
+</html>

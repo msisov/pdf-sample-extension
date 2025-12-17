@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Sample PDF Extension",
+  "version": "1",
+  "description": "Sample PDF extension for testing theme preferences",
+  "offline_enabled": true,
+  "incognito": "split",
+
+   "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; frame-src https://*.github.io"
+  },
+  "mime_types": [
+    "application/pdf"
+  ],
+  "mime_types_handler": "index.html"
+}
