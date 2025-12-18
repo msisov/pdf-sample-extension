@@ -2,92 +2,82 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import * as pdfjsLib from './lib/pdf.min.mjs';
+// External viewer URL - change this to your GitHub Pages URL
+const VIEWER_URL = 'https://msisov.github.io/pdf_viewer/viewer.html';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = './lib/pdf.worker.min.mjs';
-
-const canvas = document.getElementById('pdf-canvas');
-const context = canvas.getContext('2d');
 const loadingEl = document.getElementById('loading');
-const errorEl = document.getElementById('error');
-const pageInfoEl = document.getElementById('page-info');
-const prevBtn = document.getElementById('prev-btn');
-const nextBtn = document.getElementById('next-btn');
+const viewerFrame = document.getElementById('viewer-frame');
 
-let pdfDoc = null;
-let currentPage = 1;
-let totalPages = 0;
-let rendering = false;
+let pdfData = null;
+let viewerReady = false;
 
-async function renderPage(pageNum) {
-  if (rendering) return;
-  rendering = true;
+// Listen for messages from the viewer iframe
+window.addEventListener('message', (event) => {
+  if (event.data.type === 'viewerReady') {
+    viewerReady = true;
+    sendPdfToViewer();
+  } else if (event.data.type === 'pdfLoaded') {
+    console.log(`PDF loaded: ${event.data.numPages} pages`);
+  } else if (event.data.type === 'pdfError') {
+    console.error('Viewer error:', event.data.message);
+  }
+});
 
-  try {
-    const page = await pdfDoc.getPage(pageNum);
-    const viewport = page.getViewport({ scale: 1.5 });
-
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-
-    await page.render({ canvasContext: context, viewport }).promise;
-
-    currentPage = pageNum;
-    pageInfoEl.textContent = `Page ${currentPage} of ${totalPages}`;
-    prevBtn.disabled = currentPage <= 1;
-    nextBtn.disabled = currentPage >= totalPages;
-  } finally {
-    rendering = false;
+function sendPdfToViewer() {
+  if (pdfData && viewerReady) {
+    viewerFrame.contentWindow.postMessage({
+      type: 'loadPdf',
+      pdfData: Array.from(pdfData)
+    }, '*');
   }
 }
 
-prevBtn.addEventListener('click', () => {
-  if (currentPage > 1) renderPage(currentPage - 1);
-});
+async function fetchPdf(streamUrl) {
+  const response = await fetch(streamUrl);
+  const reader = response.body.getReader();
+  const chunks = [];
+  let receivedLength = 0;
 
-nextBtn.addEventListener('click', () => {
-  if (currentPage < totalPages) renderPage(currentPage + 1);
-});
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
-    if (currentPage > 1) renderPage(currentPage - 1);
-  } else if (e.key === 'ArrowRight' || e.key === 'PageDown') {
-    if (currentPage < totalPages) renderPage(currentPage + 1);
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    receivedLength += value.length;
   }
-});
+
+  const data = new Uint8Array(receivedLength);
+  let position = 0;
+  for (const chunk of chunks) {
+    data.set(chunk, position);
+    position += chunk.length;
+  }
+
+  return data;
+}
 
 chrome.mimeHandler.getStreamInfo(async (streamInfo) => {
+  console.log('=== StreamInfo ===');
+  console.log('mimeType:', streamInfo.mimeType);
+  console.log('originalUrl:', streamInfo.originalUrl);
+  console.log('streamUrl:', streamInfo.streamUrl);
+  console.log('tabId:', streamInfo.tabId);
+  console.log('embedded:', streamInfo.embedded);
+  console.log('responseHeaders:', streamInfo.responseHeaders);
+
   try {
-    const response = await fetch(streamInfo.streamUrl);
-    const reader = response.body.getReader();
-    const chunks = [];
-    let receivedLength = 0;
+    // Fetch PDF data from stream
+    loadingEl.textContent = 'Fetching PDF...';
+    pdfData = await fetchPdf(streamInfo.streamUrl);
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      receivedLength += value.length;
-    }
-
-    const pdfData = new Uint8Array(receivedLength);
-    let position = 0;
-    for (const chunk of chunks) {
-      pdfData.set(chunk, position);
-      position += chunk.length;
-    }
-
-    pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
-    totalPages = pdfDoc.numPages;
-
+    // Load the external viewer
+    loadingEl.textContent = 'Loading viewer...';
+    viewerFrame.src = VIEWER_URL;
+    viewerFrame.style.display = 'block';
     loadingEl.style.display = 'none';
-    canvas.style.display = 'block';
 
-    await renderPage(1);
+    // If viewer is already ready, send the PDF
+    sendPdfToViewer();
   } catch (err) {
-    loadingEl.style.display = 'none';
-    errorEl.style.display = 'block';
-    errorEl.textContent = `Failed to load PDF: ${err.message}`;
+    loadingEl.textContent = `Failed to load PDF: ${err.message}`;
   }
 });
