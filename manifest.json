@@ -5,6 +5,7 @@
   "description": "Sample PDF extension for testing theme preferences",
   "offline_enabled": true,
   "incognito": "split",
+  "permissions": ["storage"],
 
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; frame-src https://*.github.io"

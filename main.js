@@ -7,9 +7,78 @@ const VIEWER_URL = 'https://msisov.github.io/pdf_viewer/viewer.html';
 
 const loadingEl = document.getElementById('loading');
 const viewerFrame = document.getElementById('viewer-frame');
+const fallbackBtn = document.getElementById('fallback-btn');
+const autoFallbackToggle = document.getElementById('auto-fallback-toggle');
 
 let pdfData = null;
 let viewerReady = false;
+
+// Load auto-fallback setting from storage
+function loadAutoFallbackSetting() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['autoFallback'], (result) => {
+      const enabled = result.autoFallback || false;
+      autoFallbackToggle.checked = enabled;
+      console.log('Auto-fallback setting loaded:', enabled);
+      resolve(enabled);
+    });
+  });
+}
+
+// Save auto-fallback setting to storage
+function saveAutoFallbackSetting(enabled) {
+  chrome.storage.local.set({ autoFallback: enabled }, () => {
+    console.log('Auto-fallback setting saved:', enabled);
+  });
+}
+
+// Toggle change event listener
+autoFallbackToggle.addEventListener('change', () => {
+  saveAutoFallbackSetting(autoFallbackToggle.checked);
+});
+
+// Execute auto-fallback to native handler
+function executeAutoFallback() {
+  console.log('Auto-fallback enabled, switching to native handler...');
+
+  if (typeof chrome.mimeHandler.abortAndFallbackToNativeHandler !== 'function') {
+    console.error('abortAndFallbackToNativeHandler is not available in this Chrome version');
+    return;
+  }
+
+  chrome.mimeHandler.abortAndFallbackToNativeHandler((success) => {
+    if (success) {
+      console.log('Auto-fallback initiated - page will reload with native handler');
+    } else {
+      console.error('Auto-fallback failed - no stream or operation error');
+    }
+  });
+}
+
+// Handle fallback button click
+fallbackBtn.addEventListener('click', () => {
+  console.log('Requesting fallback to native handler...');
+  fallbackBtn.disabled = true;
+  fallbackBtn.textContent = 'Falling back...';
+
+  // Check if the API is available (requires newer Chrome version)
+  if (typeof chrome.mimeHandler.abortAndFallbackToNativeHandler !== 'function') {
+    console.error('abortAndFallbackToNativeHandler is not available in this Chrome version');
+    fallbackBtn.disabled = false;
+    fallbackBtn.textContent = 'Fallback Not Supported';
+    return;
+  }
+
+  chrome.mimeHandler.abortAndFallbackToNativeHandler((success) => {
+    if (success) {
+      console.log('Fallback initiated - page will reload with native handler');
+    } else {
+      console.error('Fallback failed - no stream or operation error');
+      fallbackBtn.disabled = false;
+      fallbackBtn.textContent = 'Fallback Failed - Retry';
+    }
+  });
+});
 
 // Listen for messages from the viewer iframe
 window.addEventListener('message', (event) => {
@@ -63,6 +132,13 @@ chrome.mimeHandler.getStreamInfo(async (streamInfo) => {
   console.log('tabId:', streamInfo.tabId);
   console.log('embedded:', streamInfo.embedded);
   console.log('responseHeaders:', streamInfo.responseHeaders);
+
+  // Check auto-fallback setting
+  const autoFallbackEnabled = await loadAutoFallbackSetting();
+  if (autoFallbackEnabled) {
+    executeAutoFallback();
+    return;
+  }
 
   try {
     // Fetch PDF data from stream

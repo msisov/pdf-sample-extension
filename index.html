@@ -25,9 +25,98 @@
       font-size: 18px;
       color: #333;
     }
+
+    #controls-container {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: sans-serif;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.3s;
+      border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: #d93025;
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    #fallback-btn {
+      padding: 8px 16px;
+      background: #d93025;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-family: sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    #fallback-btn:hover {
+      background: #b71c1c;
+    }
   </style>
 </head>
 <body>
+  <div id="controls-container">
+    <div class="toggle-container">
+      <span>Auto fallback</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="auto-fallback-toggle">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <button id="fallback-btn">Fallback to Native</button>
+  </div>
   <div id="loading">Loading viewer...</div>
   <iframe id="viewer-frame" style="display: none;"></iframe>
   <script src="main.js" type="module"></script>
