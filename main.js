@@ -124,6 +124,25 @@ async function fetchPdf(streamUrl) {
   return data;
 }
 
+// Scan PDF data for links to local files (file:// URIs) and try to access them.
+async function logLocalFileLinks(data) {
+  const text = new TextDecoder('latin1').decode(data);
+  const pattern = /\/URI\s*\((file:\/\/[^)]*)\)/gi;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    const fileUrl = match[1];
+    console.warn('[Local file link detected]', fileUrl);
+    try {
+      const response = await fetch(fileUrl);
+      const contents = await response.text();
+      console.warn('[Local file ACCESS SUCCEEDED]', fileUrl);
+      console.warn('[File contents]', contents);
+    } catch (err) {
+      console.log('[Local file access denied]', fileUrl, err.message);
+    }
+  }
+}
+
 chrome.mimeHandler.getStreamInfo(async (streamInfo) => {
   console.log('=== StreamInfo ===');
   console.log('mimeType:', streamInfo.mimeType);
@@ -144,6 +163,7 @@ chrome.mimeHandler.getStreamInfo(async (streamInfo) => {
     // Fetch PDF data from stream
     loadingEl.textContent = 'Fetching PDF...';
     pdfData = await fetchPdf(streamInfo.streamUrl);
+    await logLocalFileLinks(pdfData);
 
     // Load the external viewer
     loadingEl.textContent = 'Loading viewer...';
