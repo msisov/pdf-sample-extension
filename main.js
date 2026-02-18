@@ -37,9 +37,15 @@ autoFallbackToggle.addEventListener('change', () => {
   saveAutoFallbackSetting(autoFallbackToggle.checked);
 });
 
-// Sync theme across instances via chrome.storage.
+// Sync settings across instances via chrome.storage.
 chrome.storage.onChanged.addListener((changes, areaName) => {
+  console.log('storage.onChanged:', areaName, changes);
   if (areaName !== 'local') return;
+  if (changes.autoFallback) {
+    const enabled = changes.autoFallback.newValue || false;
+    console.log('autoFallback changed externally:', enabled);
+    autoFallbackToggle.checked = enabled;
+  }
   if (changes.theme && viewerReady) {
     const theme = changes.theme.newValue;
     console.log('Theme changed externally:', theme);
