@@ -37,6 +37,18 @@ autoFallbackToggle.addEventListener('change', () => {
   saveAutoFallbackSetting(autoFallbackToggle.checked);
 });
 
+// Sync theme across instances via chrome.storage.
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local') return;
+  if (changes.theme && viewerReady) {
+    const theme = changes.theme.newValue;
+    console.log('Theme changed externally:', theme);
+    viewerFrame.contentWindow.postMessage(
+      { type: 'themeChange', theme }, '*'
+    );
+  }
+});
+
 // Execute auto-fallback to native handler
 function executeAutoFallback() {
   console.log('Auto-fallback enabled, switching to native handler...');
@@ -85,10 +97,14 @@ window.addEventListener('message', (event) => {
   if (event.data.type === 'viewerReady') {
     viewerReady = true;
     sendPdfToViewer();
+    sendSavedThemeToViewer();
   } else if (event.data.type === 'pdfLoaded') {
     console.log(`PDF loaded: ${event.data.numPages} pages`);
   } else if (event.data.type === 'pdfError') {
     console.error('Viewer error:', event.data.message);
+  } else if (event.data.type === 'themeChange') {
+    console.log('Theme changed in settings panel:', event.data.theme);
+    chrome.storage.local.set({ theme: event.data.theme });
   }
 });
 
@@ -99,6 +115,18 @@ function sendPdfToViewer() {
       pdfData: Array.from(pdfData)
     }, '*');
   }
+}
+
+// Sends the saved theme to the viewer so the settings panel
+// reflects the last known preference on load.
+function sendSavedThemeToViewer() {
+  chrome.storage.local.get(['theme'], (result) => {
+    if (result.theme) {
+      viewerFrame.contentWindow.postMessage(
+        { type: 'themeChange', theme: result.theme }, '*'
+      );
+    }
+  });
 }
 
 async function fetchPdf(streamUrl) {

@@ -1,0 +1,3 @@
+[submodule "msisov.github.io"]
+	path = msisov.github.io
+	url = https://github.com/msisov/msisov.github.io.git
