@@ -12,6 +12,7 @@ const autoFallbackToggle = document.getElementById('auto-fallback-toggle');
 
 let pdfData = null;
 let viewerReady = false;
+let pdfTabId = null;
 
 // Load auto-fallback setting from storage
 function loadAutoFallbackSetting() {
@@ -99,7 +100,7 @@ fallbackBtn.addEventListener('click', () => {
 });
 
 // Listen for messages from the viewer iframe
-window.addEventListener('message', async (event) => {
+window.addEventListener('message', (event) => {
   if (event.data.type === 'viewerReady') {
     viewerReady = true;
     sendPdfToViewer();
@@ -112,13 +113,18 @@ window.addEventListener('message', async (event) => {
     console.log('Theme changed in settings panel:', event.data.theme);
     chrome.storage.local.set({ theme: event.data.theme });
   } else if (event.data.type === 'signIn') {
-    // Iframe asked us to redirect the tab to the "sign-in" page. Mirrors
-    // Adobe's session.newSession flow where the SW navigates a tracked tab
-    // to the IMS URL. Here we use chrome.tabs.update on the current tab.
-    const tab = await chrome.tabs.getCurrent();
+    // Iframe asked us to redirect the tab to the "sign-in" page.
+    // chrome.tabs.update navigates the outer tab; window.location.href
+    // does not (the MIME handler hosts this doc inside a stream-handler
+    // frame). Tab id comes from streamInfo (chrome.tabs.getCurrent()
+    // returns undefined in a MIME handler view).
+    if (pdfTabId == null) {
+      console.warn('Sign-in requested before streamInfo arrived.');
+      return;
+    }
     const signInUrl = event.data.url || 'https://igalia.com';
-    console.log('Navigating tab', tab.id, 'to sign-in URL:', signInUrl);
-    chrome.tabs.update(tab.id, { url: signInUrl });
+    console.log('Navigating tab', pdfTabId, 'to sign-in URL:', signInUrl);
+    chrome.tabs.update(pdfTabId, { url: signInUrl });
   }
 });
 
@@ -194,8 +200,12 @@ chrome.mimeHandler.getStreamInfo(async (streamInfo) => {
   console.log('embedded:', streamInfo.embedded);
   console.log('responseHeaders:', streamInfo.responseHeaders);
 
-  // Remember this URL so the service worker can navigate the tab back
-  // here after the user "signs in" (clicks the toolbar action).
+  // Remember the tab id so the sign-in handler can navigate this tab
+  // (chrome.tabs.getCurrent() returns undefined in a MIME handler view).
+  pdfTabId = streamInfo.tabId;
+
+  // Remember the PDF URL so the SW knows when its goBack loop has
+  // landed on the PDF entry (it compares tab.url to this on each step).
   chrome.storage.local.set({ lastPdfUrl: streamInfo.originalUrl });
 
   // Check auto-fallback setting
