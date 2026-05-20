@@ -204,8 +204,8 @@ chrome.mimeHandler.getStreamInfo(async (streamInfo) => {
   // (chrome.tabs.getCurrent() returns undefined in a MIME handler view).
   pdfTabId = streamInfo.tabId;
 
-  // Remember the PDF URL so the SW knows when its goBack loop has
-  // landed on the PDF entry (it compares tab.url to this on each step).
+  // Remember the PDF URL so the SW can navigate the tab back here via
+  // chrome.tabs.update when the user clicks the toolbar action.
   chrome.storage.local.set({ lastPdfUrl: streamInfo.originalUrl });
 
   // Check auto-fallback setting
