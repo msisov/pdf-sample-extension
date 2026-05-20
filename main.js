@@ -99,7 +99,7 @@ fallbackBtn.addEventListener('click', () => {
 });
 
 // Listen for messages from the viewer iframe
-window.addEventListener('message', (event) => {
+window.addEventListener('message', async (event) => {
   if (event.data.type === 'viewerReady') {
     viewerReady = true;
     sendPdfToViewer();
@@ -111,6 +111,14 @@ window.addEventListener('message', (event) => {
   } else if (event.data.type === 'themeChange') {
     console.log('Theme changed in settings panel:', event.data.theme);
     chrome.storage.local.set({ theme: event.data.theme });
+  } else if (event.data.type === 'signIn') {
+    // Iframe asked us to redirect the tab to the "sign-in" page. Mirrors
+    // Adobe's session.newSession flow where the SW navigates a tracked tab
+    // to the IMS URL. Here we use chrome.tabs.update on the current tab.
+    const tab = await chrome.tabs.getCurrent();
+    const signInUrl = event.data.url || 'https://igalia.com';
+    console.log('Navigating tab', tab.id, 'to sign-in URL:', signInUrl);
+    chrome.tabs.update(tab.id, { url: signInUrl });
   }
 });
 
@@ -185,6 +193,10 @@ chrome.mimeHandler.getStreamInfo(async (streamInfo) => {
   console.log('tabId:', streamInfo.tabId);
   console.log('embedded:', streamInfo.embedded);
   console.log('responseHeaders:', streamInfo.responseHeaders);
+
+  // Remember this URL so the service worker can navigate the tab back
+  // here after the user "signs in" (clicks the toolbar action).
+  chrome.storage.local.set({ lastPdfUrl: streamInfo.originalUrl });
 
   // Check auto-fallback setting
   const autoFallbackEnabled = await loadAutoFallbackSetting();

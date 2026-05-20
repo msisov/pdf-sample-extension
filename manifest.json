@@ -5,14 +5,24 @@
   "description": "Sample PDF extension for testing theme preferences",
   "offline_enabled": true,
   "incognito": "split",
-  "permissions": ["storage"],
+  "permissions": ["storage", "tabs"],
   "host_permissions": ["https://msisov.github.io/*"],
+
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+
+  "action": {
+    "default_title": "Complete sign-in and return to PDF"
+  },
 
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; frame-src https://*.github.io"
   },
-  "mime_types": [
-    "application/pdf"
-  ],
-  "mime_types_handler": "index.html"
+  "mime_types_handler": {
+    "application/pdf": {
+      "handler_url": "index.html",
+      "can_embed": true
+    }
+  }
 }
